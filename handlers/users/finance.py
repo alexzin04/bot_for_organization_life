@@ -1,3 +1,4 @@
+from re import A
 from aiogram.dispatcher import FSMContext
 from loader import dp
 from aiogram.types import CallbackQuery,Message
@@ -6,12 +7,12 @@ from keyboards.inline.finance_keyboards import  consumption_keyboard,consumption
 from keyboards.inline.finance_keyboards import finance_income_yes_no_keuboard_2,income_keyboard,finance_income_yes_no_keuboard
 from keyboards.inline.finance_keyboards import finance_data_keyboard,transfer_keyboard,transfer_keyboard_2,finance_transfer_yes_no_keuboard,finance_history_keyboard,finance_history_1_keyboard
 from keyboards.inline.finance_keyboards import history_keyboard,history_keyboard_2,history_keyboard_3,history_keyboard_4,change_account_money_keyboard,finance_change_yes_no_keuboard
-from keyboards.inline.finance_keyboards import delete_account_keyboard,finance_delete_yes_no_keuboard
+from keyboards.inline.finance_keyboards import delete_account_keyboard,finance_delete_yes_no_keuboard,finance_add_new_category_yes_no_keuboard
 from keyboards.inline.start_keyboard import start__keybord
-from utils.db_api.finance_db import insert_new_purchases,insrert_new_income,transfer_from_account_to_account,get_money_from_accounts,get_all_purchases,get_account_category_purchases
+from utils.db_api.finance_db import insert_new_category, insert_new_purchases,insrert_new_income,transfer_from_account_to_account,get_money_from_accounts,get_all_purchases,get_account_category_purchases
 from utils.db_api.finance_db import get_account_from_id,get_account_purchases,get_category_purchases,change_account_money,delete_account
 from aiogram.dispatcher import FSMContext
-from states.finance_state import finance_income_state,finance_iconsumption_state,finance_transfer_state,finance_change_state
+from states.finance_state import finance_income_state,finance_iconsumption_state,finance_transfer_state,finance_change_state,finance_add_new_category_state
 from aiogram.dispatcher.filters import Text
 
 @dp.callback_query_handler(text='finance')
@@ -166,7 +167,7 @@ async def productt(call: CallbackQuery,state:FSMContext):
 
 
 #Доп функции
-@dp.callback_query_handler(text='finance_data')
+@dp.callback_query_handler(text='finance_data',state='*')
 async def productt(call: CallbackQuery,state:FSMContext):
     await call.answer(cache_time=60)
     await call.message.delete()
@@ -252,7 +253,7 @@ def transformation_list(listt:list)->str:
         s='Ваши трасходы:\nНазвание траты|Категория траты|Счет|Сумма|Дата\n'
         for i in listt:
             name,cat,acc,money,data=i
-            s+=f'''{name}|{cat}|{acc if acc!=None else 'счет удален'}|{money}|{data}\n'''
+            s+=f'''{name}|{cat if cat!=None else 'категория удалена'}|{acc if acc!=None else 'счет удален'}|{money}|{data}\n'''
             summ+=money
         s+=f'\nВсего потрачено: {summ}'
     else: s='У вас нет расходов за это время'
@@ -372,7 +373,7 @@ async def productt(call: CallbackQuery,state:FSMContext):
     change_account_money(dictt['id'],dictt["money"])
     await call.message.answer('Изменение произошло успешно)\nВыберите нужную функцию',reply_markup=start__keybord)
 
-#удаление счат
+#удаление счёта
 @dp.callback_query_handler(text="delete_account")
 async def productt(call: CallbackQuery):
     await call.answer(cache_time=60)
@@ -395,3 +396,33 @@ async def productt(call: CallbackQuery,state:FSMContext):
     delete_account( int((await state.get_data())["id"]))
     await state.finish()
     await call.message.answer('Счет успешно удален\nВыберите функцию',reply_markup=start__keybord)
+
+#добавление новой категории
+@dp.callback_query_handler(text='add_new_category')
+async def productt(call: CallbackQuery,state:FSMContext):
+    await call.answer(cache_time=60)
+    await call.message.delete()
+    await state.finish()
+    await finance_add_new_category_state.Q1.set()
+    await call.message.answer('Введите название новой категории(или отмена в случае ошибки):')
+
+@dp.message_handler(Text(equals='отмена',ignore_case=True),state=finance_add_new_category_state.Q1)
+async def productt(message:Message,state:FSMContext):
+    await message.answer(text='Выберите функцию',reply_markup=finance_data_keyboard)
+    await state.finish()
+
+@dp.message_handler(state=finance_add_new_category_state.Q1)
+async def productt(message:Message,state:FSMContext):
+    text=message.text
+    await message.answer(f'Вы ввели {text} все верно?',reply_markup=finance_add_new_category_yes_no_keuboard)
+    await state.update_data({'name':text})
+
+@dp.callback_query_handler(text='add_new_category_yes',state=finance_add_new_category_state.Q1)
+async def productt(call: CallbackQuery,state:FSMContext):
+    await call.answer(cache_time=60)
+    await call.message.delete()
+    name=(await state.get_data())['name']
+    insert_new_category(name)
+    await state.finish()
+    await call.message.answer('Новая категория добавлена\nВыберите функцию:',reply_markup=start__keybord)
+

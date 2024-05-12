@@ -5,8 +5,7 @@ from datetime import date, datetime, time, timedelta
 #from loader import scheduler
 #from utils.tasks_reapeats import send_notification
 
-async def tessttt():
-    print('Тест прошел успешно')
+
 
 def create():
     sqlite_connection = sqlite3.connect('all.db')
@@ -100,7 +99,7 @@ def get_task_for_time(days:int=0)->dict:
             dictt.update({i[1]:value})
         else:
             dictt.update({i[1]:[[i[0],i[2],i[3]]]})
-    if days!=0:
+    """if days!=0:
         sqlite_insert_query=f'''SELECT name,repeat_date_next,repeat_rules,time,id
             from repeat_tasks  
             where repeat_date_next<=date('now','{days} days')
@@ -143,7 +142,7 @@ def get_task_for_time(days:int=0)->dict:
                     else:
                         dictt.update({date_start_str:[[name,id, timee]]})
                 else:
-                    break
+                    break"""
     return(dictt)
 
 def generate_str_from_dict_task(dictt:dict)->str:

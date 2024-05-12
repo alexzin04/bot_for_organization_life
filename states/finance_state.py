@@ -12,3 +12,6 @@ class finance_transfer_state(StatesGroup):
 
 class finance_change_state(StatesGroup):
     Q1=State()
+
+class finance_add_new_category_state(StatesGroup):
+    Q1=State()

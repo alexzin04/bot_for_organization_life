@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from utils.db_api.tasks_db import get_task_for_time,get_all_every_day_challenge
 
@@ -10,6 +11,8 @@ def create_task_keyboard():
     if len(get_all_every_day_challenge())!=0:
         finance_data=InlineKeyboardButton(text='Ежедневные вызовы',callback_data='every_day_challenge')
         task_keyboard.row(finance_data)
+    add_new_task=InlineKeyboardButton(text='Добавление новой задачи',callback_data='add_new_tasks')
+    task_keyboard.insert(add_new_task)
     finance_data=InlineKeyboardButton(text='Доп Функции',callback_data='additional_func')
     task_keyboard.row(finance_data)
     back_1=InlineKeyboardButton(text='назад',callback_data='start')
@@ -46,12 +49,18 @@ once_month=InlineKeyboardButton(text='раз в месяц',callback_data='tasks
 days_of_week=InlineKeyboardButton(text='в опредленый день недели',callback_data='tasks_days_of_week')
 every_day=InlineKeyboardButton(text='каждый день',callback_data='tasks_reg_every/day')
 back=InlineKeyboardButton(text='Назад',callback_data="add_new_tasks")
-reg_task_keyboard.insert(once_month)
-reg_task_keyboard.insert(days_of_week)
 reg_task_keyboard.insert(every_day)
+reg_task_keyboard.insert(days_of_week)
+reg_task_keyboard.insert(once_month)
 reg_task_keyboard.row(back)
 
-
+def create_tasks_today_add_keyboard():
+    task_keyboard= InlineKeyboardMarkup(row_width=1)
+    task_keyboard.insert(InlineKeyboardButton(datetime.now().strftime("%Y-%m-%d"),callback_data=f'add_tasks_today_{datetime.now().strftime("%Y-%m-%d")}'))
+    task_keyboard.insert(InlineKeyboardButton((datetime.now()+timedelta(days=1)).strftime("%Y-%m-%d"),callback_data=f'add_tasks_today_{(datetime.now()+timedelta(days=1)).strftime("%Y-%m-%d")}'))
+    task_keyboard.insert(InlineKeyboardButton((datetime.now()+timedelta(days=7)).strftime("%Y-%m-%d"),callback_data=f'add_tasks_today_{(datetime.now()+timedelta(days=7)).strftime("%Y-%m-%d")}'))
+    task_keyboard.insert(InlineKeyboardButton(text="Назад",callback_data="tasks_today"))
+    return task_keyboard
 
 def reg_days_of_week_keyboard_create(flag:bool=False,mas=[]):
     reg_days_of_week_keyboard=InlineKeyboardMarkup(row_width=2)
@@ -92,6 +101,12 @@ no=InlineKeyboardButton(text='нет',callback_data='tasks_add_reg')
 rep_tasks_yes_no_2_keyborad.insert(yes)
 rep_tasks_yes_no_2_keyborad.insert(no)
 
+add_today_tasks_yes_no_keyborad=InlineKeyboardMarkup(row_width=2)
+yes=InlineKeyboardButton(text='да',callback_data='add_tasks_yes')
+no=InlineKeyboardButton(text='нет',callback_data='add_tasks_no')   
+add_today_tasks_yes_no_keyborad.insert(yes)
+add_today_tasks_yes_no_keyborad.insert(no)
+
 def create_tasks_week_keyboard():
     task_keyboard= InlineKeyboardMarkup(row_width=1)
     mas=list(get_task_for_time(7).values())
@@ -116,3 +131,25 @@ yes=InlineKeyboardButton(text='да',callback_data='every_day_challenge_yes')
 no=InlineKeyboardButton(text='нет',callback_data='every_day_challenge')   
 every_day_challenge_yes_no_2_keyborad.insert(yes)
 every_day_challenge_yes_no_2_keyborad.insert(no)
+
+additional_func_keyboard=InlineKeyboardMarkup(row_width=1)
+add_new_task=InlineKeyboardButton(text='Добавление нового вызова',callback_data='add_new_challenge')
+additional_func_keyboard.insert(add_new_task)
+add_new_task=InlineKeyboardButton(text='Удаления вызова',callback_data='dell_challenge')
+additional_func_keyboard.insert(add_new_task)
+finance_data=InlineKeyboardButton(text='Назад',callback_data='tasks')
+additional_func_keyboard.row(finance_data)
+
+every_day_challenge_add_yes_no_keyborad=InlineKeyboardMarkup(row_width=2)
+yes=InlineKeyboardButton(text='да',callback_data='every_day_add_challenge_yes')
+no=InlineKeyboardButton(text='нет',callback_data='additional_func')   
+every_day_challenge_add_yes_no_keyborad.insert(yes)
+every_day_challenge_add_yes_no_keyborad.insert(no)
+
+def create_challenge_add_keyboard():
+    task_keyboard= InlineKeyboardMarkup(row_width=1)
+    task_keyboard.insert(InlineKeyboardButton(datetime.now().strftime("%Y-%m-%d"),callback_data=f'challenge_add_today_{datetime.now().strftime("%Y-%m-%d")}'))
+    task_keyboard.insert(InlineKeyboardButton((datetime.now()+timedelta(days=1)).strftime("%Y-%m-%d"),callback_data=f'challenge_add_today_{(datetime.now()+timedelta(days=1)).strftime("%Y-%m-%d")}'))
+    task_keyboard.insert(InlineKeyboardButton((datetime.now()+timedelta(days=7)).strftime("%Y-%m-%d"),callback_data=f'challenge_add_today_{(datetime.now()+timedelta(days=7)).strftime("%Y-%m-%d")}'))
+    task_keyboard.insert(InlineKeyboardButton(text="Назад",callback_data="tasks"))
+    return task_keyboard

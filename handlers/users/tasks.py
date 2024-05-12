@@ -1,13 +1,14 @@
 from datetime import datetime,date,time,timedelta
+from email import message
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from loader import dp
 from aiogram.types import CallbackQuery,Message
 from aiogram.dispatcher.filters import Text
 from keyboards.inline.start_keyboard import start__keybord
-from keyboards.inline.tasks_keyboards import create_task_keyboard,create_tasks_today_keyboard,tasks_yes_no_keyborad,add_new_task_keybiard,reg_task_keyboard,reg_days_of_week_keyboard_create,rep_tasks_yes_no_keyborad,rep_tasks_yes_no_1_keyborad,rep_tasks_yes_no_2_keyborad,create_every_day_challenge_keyboard,every_day_challenge_yes_no_2_keyborad
-from utils.db_api.tasks_db import change_status_from_id,add_new_task,add_repeat_tasks,generate_str_from_dict_task, get_task_for_time,create_str_from_id_for_every_day_challenge,get_inforamtion_about_challenge_today,change_mas_for_every_day_challenge
-from states.tasks_state import task_add_state,task_reg_add_state,every_day_challenge_state
+from keyboards.inline.tasks_keyboards import  create_challenge_add_keyboard,additional_func_keyboard,create_tasks_today_add_keyboard,create_task_keyboard,create_tasks_today_keyboard,tasks_yes_no_keyborad,add_new_task_keybiard,reg_task_keyboard,reg_days_of_week_keyboard_create,rep_tasks_yes_no_keyborad,rep_tasks_yes_no_1_keyborad,rep_tasks_yes_no_2_keyborad,create_every_day_challenge_keyboard,every_day_challenge_yes_no_2_keyborad,add_today_tasks_yes_no_keyborad,every_day_challenge_add_yes_no_keyborad
+from utils.db_api.tasks_db import change_status_from_id,add_new_task,add_repeat_tasks,generate_str_from_dict_task, get_task_for_time,create_str_from_id_for_every_day_challenge,get_inforamtion_about_challenge_today,change_mas_for_every_day_challenge,add_new_every_day_challenge
+from states.tasks_state import task_add_state,task_reg_add_state,every_day_challenge_state,add_every_day_challenge_state
 
 
 @dp.callback_query_handler(text='tasks')
@@ -62,28 +63,63 @@ async def productt(message:Message,state:FSMContext):
 @dp.message_handler(state=task_add_state.Q1)
 async def productt(message:Message,state:FSMContext):
     await message.delete()
-    await message.answer(f'Вы ввели {message.text}\nТеперь введите дату в формате yyyy-mm-dd Если нужно время добавить через "-" (HH-MM)\n Например: 2024-01-01 14-00 В случае ошибки напишите отмена')
+    await message.answer(f'''Вы ввели {message.text}\nВыберите дату:\n(или напишите свою в формате yyyy-mm-dd Например: 2024-01-01''',reply_markup=create_tasks_today_add_keyboard())
     await state.update_data({'name':message.text})
     await task_add_state.Q2.set()
 
+@dp.callback_query_handler(text_contains='add_tasks_today_',state=task_add_state.Q2)
+async def productt(call: CallbackQuery,state:FSMContext):
+    await call.answer(cache_time=60)
+    await call.message.delete()
+    await state.update_data({'data':(datetime.strptime(call.data.split("_")[3],'%Y-%m-%d'))})
+    await call.message.answer('Нужно ли время для этой задачи?',reply_markup=add_today_tasks_yes_no_keyborad)
+    await state.reset_state(False)
+
+@dp.callback_query_handler(text='add_tasks_yes')
+async def productt(call: CallbackQuery,state:FSMContext):
+    await call.answer(cache_time=60)
+    await call.message.delete()
+    await call.message.answer('Введите время в формате hh-mm (Например 14-01)\nИли омена в случае ошибки')
+    await task_add_state.Q3.set()
+
+@dp.callback_query_handler(text='add_tasks_no')
+async def productt(call: CallbackQuery,state:FSMContext):
+    await call.answer(cache_time=60)
+    await call.message.delete()
+    dictt=await state.get_data()
+    await state.finish()
+    name=dictt["name"]
+    date=dictt['data']
+    add_new_task(name,date,False)
+    await call.message.answer("Задача успешно добавлена",reply_markup=create_tasks_today_keyboard())
+
+
 @dp.message_handler(state=task_add_state.Q2)
 async def productt(message:Message,state:FSMContext):
-    dictt=await state.get_data()
-    name=dictt["name"]
-    if len(message.text.split('-'))==5:
+    if len(message.text.split('-'))==3:
+        year,month,day=map(int,message.text.split('-'))
+        dat=date(year,month,day)
+        await state.update_data({'data':dat})
+        await message.answer('Нужно ли время для этой задачи?',reply_markup=add_today_tasks_yes_no_keyborad)
+        await state.reset_state(False)
+    else:
+        await message.answer('Вы ввели данные в неправильном формате\nПопробуйте еще раз')
+
+@dp.message_handler(state=task_add_state.Q3)
+async def productt(message:Message,state:FSMContext):
+    await message.delete()
+    if len(message.text.split('-'))==2:
+        hour,minute=map(int,message.text.split('-'))
+        dictt=await state.get_data()
         await state.finish()
-        year,month,day,hour,minute=map(int,message.text.split('-'))
-        date=datetime(year,month,day,hour,minute)
-        add_new_task(name,date,True)
-        await message.answer("Задача успешно добавлена",reply_markup=create_tasks_today_keyboard())
-    elif len(message.text.split('-'))==3:
-        await state.finish()
-        year,month,day=message.text.split('-')
-        date=datetime(year,month,day)
-        add_new_task(name,date,False)
+        name=dictt['name']
+        datee=dictt['data']
+        dat=datetime(datee.year,datee.month,datee.day,hour,minute)
+        add_new_task(name,dat,True)
         await message.answer("Задача успешно добавлена",reply_markup=create_tasks_today_keyboard())
     else:
-        await message.answer('Вы ввели данные в неправильном формате')
+        await message.answer('Вы ввели данные в неправильном формате\nПопробуйте еще раз')
+
 
 
 @dp.callback_query_handler(text='tasks_add_reg')
@@ -216,9 +252,11 @@ async def productt(call: CallbackQuery,state:FSMContext):
         for i in weekday_array:
             s+=str(i)+','
         dictt["rules"]="days_of_week "+s[:-1]
-
-    
-    date_start = date.today() + timedelta(days=(next_weekday - cur_weekday) % 7)
+        date_start = date.today() + timedelta(days=(next_weekday - cur_weekday) % 7)
+    elif dictt['rules']=="every_day":
+        date_start=date.today()
+    elif dictt['rules']=="once_month":
+        date_start=date.today()
     add_repeat_tasks(dictt['name'],date_start,dictt["rules"],time(int(dictt['time'].split('-')[0]),int(dictt['time'].split('-')[1])) if dictt['time']!=None else dictt['time'] )
     await call.message.answer('Задача успешно добавлена',reply_markup=start__keybord)
 
@@ -226,9 +264,75 @@ async def productt(call: CallbackQuery,state:FSMContext):
 @dp.callback_query_handler(text='additional_func')
 async def productt(call: CallbackQuery,state:FSMContext):
     await call.answer(cache_time=60)
+    await state.reset_data()
     await call.message.delete()
-    await call.message.answer('Раздел находится в разработке',reply_markup=start__keybord)
+    await call.message.answer('Выберите функцию:',reply_markup=additional_func_keyboard)
 
+@dp.callback_query_handler(text='add_new_challenge')
+async def productt(call: CallbackQuery,state:FSMContext):
+    await call.answer(cache_time=60)
+    await call.message.delete()
+    await call.message.answer('Введите название ежедневного вызова\nВ случае ошибки введите отмена')
+    await add_every_day_challenge_state.Q1.set()
+
+@dp.message_handler(Text(equals='отмена',ignore_case=True),state=add_every_day_challenge_state)
+async def productt(message:Message,state:FSMContext):
+    await state.finish()
+    await message.delete()
+    await message.answer('Ежедневные вызовы:',reply_markup=create_every_day_challenge_keyboard())
+
+@dp.message_handler(state=add_every_day_challenge_state.Q1)
+async def productt(message:Message,state:FSMContext):
+    await message.answer(f'Вы ввели {message.text}\nТеперь выберите дату начала, данного вызова\n(Или введите свою дату в формате yyyy-mm-dd Например 2024-01-10)',reply_markup=create_challenge_add_keyboard())
+    await state.update_data({"name":message.text})
+    await add_every_day_challenge_state.Q2.set()
+
+@dp.callback_query_handler(text_contains='challenge_add_today_',state=add_every_day_challenge_state.Q2)
+async def productt(call: CallbackQuery,state:FSMContext):
+    await call.answer(cache_time=60)
+    await call.message.delete()
+    await state.update_data({'data':(datetime.strptime(call.data.split("_")[3],'%Y-%m-%d'))})
+    await call.message.answer('Введите количество повторений\nили отмена в случае ошибки')
+    await add_every_day_challenge_state.Q3.set()
+
+@dp.message_handler(state=add_every_day_challenge_state.Q2)
+async def productt(message:Message,state:FSMContext):
+    if len(message.text.split('-'))==3:
+        year,month,day=map(int,message.text.split('-'))
+        dat=date(year,month,day)
+        await state.update_data({'data':dat})
+        await message.answer('Введите количество повторений\nили отмена в случае ошибки')
+        await add_every_day_challenge_state.Q3.set()
+    else:
+        await message.answer('Вы ввели данные в неправильном формате\nПопробуйте еще раз',reply_markup=create_challenge_add_keyboard())
+
+@dp.message_handler(state=add_every_day_challenge_state.Q3)
+async def productt(message:Message,state:FSMContext):
+    if(message.text.isdigit()):
+        await state.update_data({'count':message.text})
+        await message.answer('Введите сколько дней будет идти вызов (например 14)\nили отмена в случае ошибки')
+        await add_every_day_challenge_state.Q4.set()
+    else:
+        await message.answer('Введите число еще раз\nИли отмена в случае ошибки')
+
+@dp.message_handler(state=add_every_day_challenge_state.Q4)
+async def productt(message:Message,state:FSMContext):
+    if (message.text.split()[0]).isdigit():
+        dictt=await state.get_data()
+        date_finish=dictt['data']+timedelta(days=int((message.text.split()[0])))
+        await state.update_data({'days':int(message.text.split()[0])})
+        await message.answer(f"Вы ввели следущие данные\n1.Название: {dictt['name']}\n2.Дата начала: {dictt['data'].strftime('%Y-%m-%d')}\n3.Дата конца: {date_finish.strftime('%Y-%m-%d')}\n4.Количество повторений: {dictt['count']}\nВсе данные верны?",reply_markup=every_day_challenge_add_yes_no_keyborad)
+        await state.reset_state(False)
+    else:
+         await message.answer('Введите число дней еще раз\nИли отмена в случае ошибки')
+
+@dp.callback_query_handler(text='every_day_add_challenge_yes')
+async def productt(call: CallbackQuery,state:FSMContext):
+    await call.answer(cache_time=60)
+    await call.message.delete()
+    dictt=await state.get_data()
+    add_new_every_day_challenge(dictt["name"],dictt['data'],dictt['count'],dictt['days'])
+    await call.message.answer('Вызов успешно добавлен\nВыберите нужную функцию:',reply_markup=start__keybord)
 
 @dp.callback_query_handler(text='tasks_for_week')
 async def productt(call: CallbackQuery,state:FSMContext):
